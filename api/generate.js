@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  // הגדרת כותרות CORS
+  // הגדרת כותרות CORS לאבטחה וגישה מהדפדפן
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -14,13 +14,13 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'API Key missing in Vercel Environment Variables.' });
+    return res.status(500).json({ error: 'API Key missing. Please set GEMINI_API_KEY in Vercel settings.' });
   }
 
   try {
     const { promptInput } = req.body;
     
-    // שימוש במודל imagen-3.0-generate-001 - השם התקני ל-AI Studio
+    // כתובת ה-API המעודכנת למודל Imagen 3
     const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`;
     
     const response = await fetch(url, {
@@ -28,7 +28,9 @@ export default async function handler(req, res) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         instances: [
-          { prompt: promptInput }
+          { 
+            prompt: `A beautiful, detailed illustration of an imaginary land: ${promptInput}. Storybook style, vibrant colors.` 
+          }
         ],
         parameters: {
           sampleCount: 1,
@@ -41,10 +43,11 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
-      // אם השגיאה חוזרת, אנחנו נחזיר את ההודעה המדויקת מגוגל
+      // חילוץ הודעת השגיאה המפורטת מגוגל
+      const errorMsg = data.error?.message || "Unknown error from Google API";
       return res.status(response.status).json({ 
-        error: data.error?.message || "שגיאה בתקשורת עם גוגל",
-        technical: data
+        error: `שגיאת גוגל: ${errorMsg}`,
+        technicalDetails: data 
       });
     }
 
