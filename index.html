@@ -22,11 +22,11 @@
         <div class="p-6 md:p-10">
             <textarea id="promptInput" rows="4" 
                 class="w-full px-5 py-4 border-2 border-teal-100 rounded-2xl focus:outline-none focus:border-teal-500 text-lg mb-6 shadow-inner"
-                placeholder="לדוגמה: עיר שכולה עשויה מבלונים ומרחפת בשמיים..."></textarea>
+                placeholder="לדוגמה: יער של סוכריות על מקל עם נחל של מיץ פטל..."></textarea>
 
             <button id="generateBtn" onclick="generateImage()" 
                 class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg text-xl flex justify-center items-center gap-3">
-                צייר לי גלויה!
+                <span>צייר לי גלויה!</span>
             </button>
 
             <div id="errorMessage" class="hidden mt-6 bg-red-50 border-r-8 border-red-500 text-red-800 px-6 py-4 rounded-xl shadow-md">
@@ -35,18 +35,20 @@
         </div>
 
         <div class="bg-gray-100 p-8 border-t border-gray-200 flex flex-col items-center justify-center min-h-[400px] postcard-frame relative">
+            
             <div id="loadingState" class="hidden flex flex-col items-center text-teal-700">
                 <div class="animate-spin h-16 w-16 border-4 border-teal-500 border-t-transparent rounded-full mb-4"></div>
-                <p class="font-bold text-2xl animate-pulse">הבינה המלאכותית חולמת...</p>
+                <p id="loadingStatus" class="font-bold text-2xl animate-pulse text-center">מכין את הצבעים...</p>
+                <p class="text-gray-500 mt-2 text-center text-sm">הדימיון כבר בדרך!</p>
             </div>
 
-            <div id="imageResultContainer" class="hidden w-full max-w-md bg-white p-4 shadow-2xl transform rotate-2 rounded-sm border-4 border-double border-gray-200">
+            <div id="imageResultContainer" class="hidden w-full max-w-md bg-white p-4 shadow-2xl transform rotate-1 rounded-sm border-4 border-double border-gray-200">
                 <img id="generatedImage" src="" alt="גלויה מהדמיון" class="w-full h-auto">
                 <div class="mt-4 text-center font-serif text-gray-400 italic">Postcard from Imagination</div>
             </div>
 
             <div id="initialText" class="text-gray-400 text-center">
-                <p class="text-xl">הגלויה שלכם תופיע כאן</p>
+                <p class="text-xl">הגלויה המוכנה תופיע כאן</p>
             </div>
         </div>
     </div>
@@ -56,6 +58,7 @@
             const promptInput = document.getElementById('promptInput').value.trim();
             const btn = document.getElementById('generateBtn');
             const loadingState = document.getElementById('loadingState');
+            const loadingStatus = document.getElementById('loadingStatus');
             const initialText = document.getElementById('initialText');
             const imageResultContainer = document.getElementById('imageResultContainer');
             const generatedImage = document.getElementById('generatedImage');
@@ -66,11 +69,12 @@
             errorContainer.classList.add('hidden');
             btn.disabled = true;
             loadingState.classList.remove('hidden');
+            loadingStatus.innerText = "מתרגם את התיאור...";
             initialText.classList.add('hidden');
             imageResultContainer.classList.add('hidden');
 
             try {
-                // 1. קריאה לשרת שלנו כדי לקבל פרומפט באנגלית
+                // שלב 1: פנייה לשרת ב-Vercel לתרגום התיאור
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -80,12 +84,12 @@
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || "שגיאה בשרת");
 
-                const refinedPrompt = encodeURIComponent(data.refinedPrompt);
+                loadingStatus.innerText = "מצייר את הגלויה...";
                 
-                // 2. יצירת כתובת תמונה דרך שירות Pollinations (חופשי וחינמי)
-                const imageUrl = `https://pollinations.ai/p/${refinedPrompt}?width=800&height=800&seed=${Math.floor(Math.random()*10000)}&model=flux`;
+                // שלב 2: יצירת התמונה (משתמש במודל turbo המהיר של Pollinations)
+                const refinedPrompt = encodeURIComponent(data.refinedPrompt);
+                const imageUrl = `https://pollinations.ai/p/${refinedPrompt}?width=800&height=800&seed=${Math.floor(Math.random()*10000)}&model=turbo&nologo=true`;
 
-                // טעינה והצגה
                 const img = new Image();
                 img.onload = () => {
                     generatedImage.src = imageUrl;
@@ -93,7 +97,7 @@
                     imageResultContainer.classList.remove('hidden');
                     btn.disabled = false;
                 };
-                img.onerror = () => { throw new Error("בעיה בטעינת התמונה מהשרת"); };
+                img.onerror = () => { throw new Error("בעיה בטעינת התמונה."); };
                 img.src = imageUrl;
 
             } catch (err) {
