@@ -6,34 +6,38 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'מפתח ה-API לא הוגדר כראוי ב-Vercel' });
+  if (!apiKey) return res.status(500).json({ error: 'Missing API Key' });
 
   try {
     const { promptInput } = req.body;
     
-    // שימוש במודל המעודכן ביותר gemini-1.5-flash-latest
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `Generate a 5-word English visual prompt for: ${promptInput}` }] }]
+        contents: [{ 
+          parts: [{ 
+            text: `Translate the following Hebrew description into a detailed English image prompt. 
+            STRICT RULE: Output ONLY English words. Do not include any Hebrew characters or explanations. 
+            If the input is unclear, output "magical fantasy landscape".
+            Hebrew input: ${promptInput}` 
+          }] 
+        }],
+        generationConfig: { maxOutputTokens: 50 }
       })
     });
 
     const data = await response.json();
+    let result = data.candidates?.[0]?.content?.parts?.[0]?.text || "magical land";
+    
+    // ניקוי נוסף למקרה שגוגל התחכם והוסיף עברית
+    result = result.replace(/[\u0590-\u05FF]/g, ''); 
 
-    if (!response.ok) {
-      // אם גוגל מחזיר שגיאה, נחזיר תרגום בסיסי "קשיח" כדי שהציור יצליח
-      return res.status(200).json({ refinedPrompt: "magical fantasy landscape " + promptInput.substring(0, 10) });
-    }
-
-    const result = data.candidates?.[0]?.content?.parts?.[0]?.text || "magical land";
     return res.status(200).json({ refinedPrompt: result.trim() });
 
   } catch (err) {
-    // במקרה של קריסה, מחזירים פרומפט באנגלית כדי שהתהליך ימשך
-    return res.status(200).json({ refinedPrompt: "magical landscape" });
+    return res.status(200).json({ refinedPrompt: "dreamy landscape" });
   }
 }
