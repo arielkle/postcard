@@ -14,27 +14,26 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'מפתח API לא הוגדר בשרת Vercel' });
+    return res.status(500).json({ error: 'API Key missing in Vercel Environment Variables.' });
   }
 
   try {
     const { promptInput } = req.body;
     
-    // שליחה למודל Imagen - שים לב למבנה ה-instances המדויק (מערך)
+    // שימוש במודל imagen-3.0-generate-001 - השם התקני ל-AI Studio
     const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`;
     
-    console.log("Sending prompt to Google:", promptInput);
-
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         instances: [
-          { prompt: `A magical, detailed, vibrant illustration of an imaginary land: ${promptInput}. Storybook style, no text.` }
+          { prompt: promptInput }
         ],
-        parameters: { 
+        parameters: {
           sampleCount: 1,
-          aspectRatio: "1:1"
+          aspectRatio: "1:1",
+          safetySetting: "BLOCK_LOW_AND_ABOVE"
         }
       })
     });
@@ -42,17 +41,16 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Google API Error:", data);
+      // אם השגיאה חוזרת, אנחנו נחזיר את ההודעה המדויקת מגוגל
       return res.status(response.status).json({ 
         error: data.error?.message || "שגיאה בתקשורת עם גוגל",
-        details: data 
+        technical: data
       });
     }
 
     return res.status(200).json(data);
 
   } catch (error) {
-    console.error("Internal Server Error:", error);
-    return res.status(500).json({ error: 'שגיאה פנימית בשרת: ' + error.message });
+    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
   }
 }
