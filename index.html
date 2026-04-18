@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>יוצר הגלויות הדמיוניות</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f0fdfa; /* רקע ירקרק-תכלת נעים */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .postcard {
+            background-image: repeating-linear-gradient(45deg, #ffffff 25%, transparent 25%, transparent 75%, #ffffff 75%, #ffffff), repeating-linear-gradient(45deg, #ffffff 25%, #f0f0f0 25%, #f0f0f0 75%, #ffffff 75%, #ffffff);
+            background-position: 0 0, 10px 10px;
+            background-size: 20px 20px;
+        }
+        /* כלי להסתרת אלמנטים */
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-2xl w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-teal-100">
+        
+        <!-- כותרת -->
+        <div class="bg-teal-500 text-white text-center py-6 px-4">
+            <h1 class="text-3xl font-bold mb-2">🌍 יוצר הגלויות הדמיוניות 🎨</h1>
+            <p class="text-teal-100">תארו ארץ קסומה, והבינה המלאכותית תצייר לכם אותה!</p>
+        </div>
+
+        <!-- אזור יצירת התמונה (הטופס) -->
+        <div class="p-6 md:p-8">
+            <div class="mb-6">
+                <label for="promptInput" class="block text-gray-700 font-bold mb-2 text-lg">מה יש בארץ הדמיונית שלכם?</label>
+                <textarea id="promptInput" rows="4" 
+                    class="w-full px-4 py-3 border-2 border-teal-200 rounded-xl focus:outline-none focus:border-teal-500 transition-colors resize-none text-gray-700"
+                    placeholder="לדוגמה: ארץ שבה העצים עשויים מצמר גפן מתוק, נהרות של שוקולד זורמים בין הרים סגולים, ושמיים בצבע זהב..."></textarea>
+            </div>
+
+            <button id="generateBtn" onclick="generateImage()" 
+                class="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-md transform hover:scale-105 duration-200 text-lg flex justify-center items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                צייר לי גלויה!
+            </button>
+
+            <!-- אזור הודעות שגיאה -->
+            <div id="errorMessage" class="hidden mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <strong class="font-bold">אופס!</strong>
+                <span class="block sm:inline" id="errorText">משהו השתבש. נסה שוב.</span>
+            </div>
+        </div>
+
+        <!-- אזור תצוגת התוצאה (הגלויה) -->
+        <div class="bg-gray-50 p-6 border-t border-gray-100 flex flex-col items-center justify-center min-h-[300px] postcard relative">
+            
+            <!-- מצב טעינה (מוסתר כברירת מחדל) -->
+            <div id="loadingState" class="hidden flex flex-col items-center justify-center text-teal-600">
+                <svg class="animate-spin -ml-1 mr-3 h-12 w-12 text-teal-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="font-bold text-lg animate-pulse">הבינה המלאכותית מציירת את הגלויה שלך...</p>
+                <p class="text-sm text-gray-500 mt-2">זה יכול לקחת כמה שניות</p>
+            </div>
+
+            <!-- התמונה המוצגת (מוסתרת כברירת מחדל) -->
+            <div id="imageResultContainer" class="hidden w-full max-w-lg bg-white p-3 shadow-2xl transform rotate-1 transition-transform hover:rotate-0 duration-300">
+                <img id="generatedImage" src="" alt="גלויה דמיונית שנוצרה" class="w-full h-auto border border-gray-200">
+                <div class="mt-4 text-center font-serif text-gray-600 border-t border-dashed border-gray-300 pt-2">
+                    "דרישת שלום מהארץ הדמיונית"
+                </div>
+            </div>
+
+            <!-- טקסט התחלתי -->
+            <div id="initialText" class="text-gray-400 text-center font-medium">
+                הגלויה המוכנה תופיע ממש כאן...
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // המפתח יוזרק אוטומטית על ידי הסביבה, אין צורך למלא אותו כאן
+        const apiKey = ""; 
+
+        // פונקציה חכמה שמבצעת ניסיונות חוזרים (Backoff) במקרה של עומס על השרת
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            const delays = [1000, 2000, 4000, 8000, 16000]; // זמני המתנה בין ניסיונות
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`שגיאת שרת: ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error; // זריקת השגיאה אם הגענו לניסיון האחרון
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+            }
+        }
+
+        async function generateImage() {
+            const promptInput = document.getElementById('promptInput').value.trim();
+            const errorContainer = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            
+            // איפוס שגיאות
+            errorContainer.classList.add('hidden');
+
+            // בדיקה שהתלמיד אכן כתב משהו
+            if (!promptInput) {
+                errorText.innerText = "בבקשה תארו את הארץ הדמיונית שלכם לפני שאתם לוחצים על הכפתור.";
+                errorContainer.classList.remove('hidden');
+                return;
+            }
+
+            // עדכון הממשק למצב "טעינה"
+            const btn = document.getElementById('generateBtn');
+            const loadingState = document.getElementById('loadingState');
+            const initialText = document.getElementById('initialText');
+            const imageResultContainer = document.getElementById('imageResultContainer');
+            const generatedImage = document.getElementById('generatedImage');
+
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            initialText.classList.add('hidden');
+            imageResultContainer.classList.add('hidden');
+            loadingState.classList.remove('hidden');
+
+            try {
+                // אנחנו מוסיפים לתיאור של התלמיד הנחיות נוספות באנגלית כדי שהמודל יבין שמדובר בסגנון של גלויה ציורית
+                const enhancedPrompt = `A beautiful, magical, highly detailed illustrated postcard of an imaginary land. Description: ${promptInput}. Vibrant colors, storybook style, no text in the image.`;
+
+                // קריאה ל-API של מודל התמונות של גוגל (Imagen)
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+                const options = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        instances: { prompt: enhancedPrompt },
+                        parameters: { sampleCount: 1 }
+                    })
+                };
+
+                const data = await fetchWithRetry(url, options);
+
+                // חילוץ התמונה מהתשובה של השרת
+                if (data && data.predictions && data.predictions[0] && data.predictions[0].bytesBase64Encoded) {
+                    const base64Image = data.predictions[0].bytesBase64Encoded;
+                    generatedImage.src = `data:image/png;base64,${base64Image}`;
+                    
+                    // הצגת התמונה והסתרת הטעינה
+                    loadingState.classList.add('hidden');
+                    imageResultContainer.classList.remove('hidden');
+                } else {
+                    throw new Error("לא התקבלה תמונה תקינה מהשרת.");
+                }
+
+            } catch (error) {
+                console.error("Error generating image:", error);
+                loadingState.classList.add('hidden');
+                initialText.classList.remove('hidden');
+                errorText.innerText = "הייתה בעיה ביצירת התמונה (אולי הארץ דמיונית מדי? 😉). נסו לתאר אותה במילים אחרות ולנסות שוב.";
+                errorContainer.classList.remove('hidden');
+            } finally {
+                // החזרת הכפתור למצב פעיל
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+    </script>
+</body>
+</html>
