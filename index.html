@@ -8,7 +8,12 @@
     <style>
         body { background-color: #f8fafc; font-family: system-ui, sans-serif; }
         .hidden { display: none; }
-        .postcard-container { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+        .postcard-container { 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 12px solid white;
+        }
+        @keyframes shimmer { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        .loading-pulse { animation: shimmer 2s infinite; }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
@@ -29,25 +34,33 @@
                 צייר לי גלויה!
             </button>
             
-            <div id="debug" class="hidden mt-4 p-3 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-mono border border-slate-200">
+            <div id="debug" class="hidden mt-4 p-3 bg-slate-50 text-slate-500 rounded-lg text-[10px] font-mono border border-slate-100">
                 <ul id="logs" class="list-disc list-inside"></ul>
             </div>
         </div>
 
-        <div class="bg-slate-50 p-6 flex flex-col items-center justify-center min-h-[350px]">
+        <div class="bg-slate-50 p-6 flex flex-col items-center justify-center min-h-[380px]">
+            <!-- אנימציית טעינה -->
             <div id="loader" class="hidden flex flex-col items-center">
-                <div class="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p id="status" class="font-bold text-teal-700 text-xl animate-pulse">הקסם מתחיל...</p>
+                <div class="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p id="status" class="font-bold text-teal-700 text-xl loading-pulse">הקסם מתרחש...</p>
             </div>
 
+            <!-- התוצאה -->
             <div id="result" class="hidden w-full flex flex-col items-center">
-                <div class="bg-white p-3 postcard-container border-8 border-white rounded-sm transform rotate-1">
-                    <img id="img" class="w-full h-auto shadow-inner" src="" alt="Postcard">
+                <div class="bg-white postcard-container rounded-sm transform rotate-1 transition-transform hover:rotate-0 duration-500">
+                    <img id="img" class="w-full h-auto" src="" alt="Postcard">
                 </div>
-                <p class="mt-6 font-serif italic text-slate-400 border-t border-dashed border-slate-300 pt-2 w-full text-center">Greetings from Imagination</p>
+                <div class="mt-6 w-full border-t border-dashed border-slate-300 pt-4 flex justify-between items-center px-4">
+                    <p class="font-serif italic text-slate-400">Greetings from Imagination</p>
+                    <div class="w-10 h-12 bg-slate-200 rounded-sm opacity-50 border border-slate-300"></div>
+                </div>
             </div>
 
-            <p id="placeholder" class="text-slate-300 font-medium">הגלויה המוכנה תופיע כאן</p>
+            <div id="placeholder" class="text-slate-300 font-medium text-center">
+                <svg class="w-16 h-16 mx-auto mb-2 opacity-20" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"></path></svg>
+                הגלויה שלכם תופיע כאן
+            </div>
         </div>
     </div>
 
@@ -64,7 +77,7 @@
             const input = document.getElementById('promptInput').value.trim();
             if(!input) return;
 
-            // איפוס ממשק
+            // ניקוי מסך
             document.getElementById('logs').innerHTML = "";
             document.getElementById('placeholder').classList.add('hidden');
             document.getElementById('result').classList.add('hidden');
@@ -75,28 +88,26 @@
             let finalPrompt = "magical landscape";
 
             try {
-                log("פונה לשרת לתרגום...");
-                status.innerText = "מעבד...";
+                log("מנתח את התיאור...");
+                status.innerText = "מתרגם...";
 
-                try {
-                    const res = await fetch('/api/generate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ promptInput: input })
-                    });
-                    const data = await res.json();
-                    finalPrompt = data.refinedPrompt || finalPrompt;
-                    log("תרגום מוכן: " + finalPrompt);
-                } catch(e) {
-                    log("דילוג על תרגום בשל איטיות.");
-                }
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ promptInput: input })
+                });
+                
+                const data = await res.json();
+                
+                // ניקוי תווים לא לטיניים מהתוצאה (ליתר ביטחון)
+                finalPrompt = (data.refinedPrompt || "magical land").replace(/[^\x00-\x7F]/g, "");
+                log("פרומפט סופי: " + finalPrompt);
 
                 status.innerText = "מצייר...";
-                log("פונה לשירות הציור...");
+                log("יוצר את התמונה...");
 
                 const seed = Math.floor(Math.random() * 1000000);
-                // שימוש בכתובת המודרנית של Pollinations
-                const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?width=1024&height=1024&seed=${seed}&nologo=true`;
+                const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?width=1024&height=1024&seed=${seed}&nologo=true&model=flux`;
 
                 const tempImg = new Image();
                 tempImg.onload = () => {
@@ -107,9 +118,9 @@
                     log("הצלחה!");
                 };
                 tempImg.onerror = () => {
-                    log("שגיאה בטעינת התמונה. מנסה שוב...");
-                    // ניסיון אחרון עם מודל בסיסי
-                    document.getElementById('img').src = `https://image.pollinations.ai/prompt/colorful%20dream%20landscape?seed=${seed}`;
+                    log("שגיאה בשירות התמונות. מנסה גיבוי...");
+                    // גיבוי מהיר
+                    document.getElementById('img').src = `https://image.pollinations.ai/prompt/fantasy%20landscape?seed=${seed}`;
                     document.getElementById('loader').classList.add('hidden');
                     document.getElementById('result').classList.remove('hidden');
                     document.getElementById('btn').disabled = false;
