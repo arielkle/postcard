@@ -1,40 +1,48 @@
 export default async function handler(req, res) {
-  // מוודאים שרק האפליקציה שלנו שולחת בקשות מסוג POST
+  // הגדרת כותרות CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // השרת שולף את המפתח הסודי מההגדרות המאובטחות שלו
   const apiKey = process.env.GEMINI_API_KEY;
-  
   if (!apiKey) {
-    return res.status(500).json({ error: 'API key is missing on the server' });
+    return res.status(500).json({ error: 'API Key missing. Please set GEMINI_API_KEY in Vercel settings.' });
   }
 
   try {
     const { promptInput } = req.body;
     
-    // מוסיפים את ההנחיות כדי שזה ייראה כמו גלויה
-    const enhancedPrompt = `A beautiful, magical, highly detailed illustrated postcard of an imaginary land. Description: ${promptInput}. Vibrant colors, storybook style, no text in the image.`;
-
-    // השרת שלנו (ולא הדפדפן של הילד) הוא זה שפונה לגוגל
+    // כתובת ה-API של Imagen 4.0
     const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: { prompt: enhancedPrompt },
+        instances: { prompt: `A magical illustrated postcard of: ${promptInput}` },
         parameters: { sampleCount: 1 }
       })
     });
 
     const data = await response.json();
-    
-    // השרת שולח את התמונה חזרה לאפליקציה שלך
-    res.status(200).json(data);
+
+    // אם גוגל החזירה שגיאה
+    if (data.error || (data.predictions && data.predictions[0] && data.predictions[0].error)) {
+      const errorMsg = data.error?.message || data.predictions[0].error;
+      return res.status(400).json({ error: errorMsg });
+    }
+
+    return res.status(200).json(data);
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error generating image' });
+    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
   }
 }
