@@ -14,35 +14,45 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'API Key missing. Please set GEMINI_API_KEY in Vercel settings.' });
+    return res.status(500).json({ error: 'מפתח API לא הוגדר בשרת Vercel' });
   }
 
   try {
     const { promptInput } = req.body;
     
-    // כתובת ה-API של Imagen 4.0
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+    // שליחה למודל Imagen - שים לב למבנה ה-instances המדויק (מערך)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`;
     
+    console.log("Sending prompt to Google:", promptInput);
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: { prompt: `A magical illustrated postcard of: ${promptInput}` },
-        parameters: { sampleCount: 1 }
+        instances: [
+          { prompt: `A magical, detailed, vibrant illustration of an imaginary land: ${promptInput}. Storybook style, no text.` }
+        ],
+        parameters: { 
+          sampleCount: 1,
+          aspectRatio: "1:1"
+        }
       })
     });
 
     const data = await response.json();
 
-    // אם גוגל החזירה שגיאה
-    if (data.error || (data.predictions && data.predictions[0] && data.predictions[0].error)) {
-      const errorMsg = data.error?.message || data.predictions[0].error;
-      return res.status(400).json({ error: errorMsg });
+    if (!response.ok) {
+      console.error("Google API Error:", data);
+      return res.status(response.status).json({ 
+        error: data.error?.message || "שגיאה בתקשורת עם גוגל",
+        details: data 
+      });
     }
 
     return res.status(200).json(data);
 
   } catch (error) {
-    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+    console.error("Internal Server Error:", error);
+    return res.status(500).json({ error: 'שגיאה פנימית בשרת: ' + error.message });
   }
 }
