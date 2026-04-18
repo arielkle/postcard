@@ -133,14 +133,14 @@
                 // אנחנו מוסיפים לתיאור של התלמיד הנחיות נוספות באנגלית כדי שהמודל יבין שמדובר בסגנון של גלויה ציורית
                 const enhancedPrompt = `A beautiful, magical, highly detailed illustrated postcard of an imaginary land. Description: ${promptInput}. Vibrant colors, storybook style, no text in the image.`;
 
-                // קריאה ל-API של מודל התמונות של גוגל (Imagen)
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+                // *** כאן בוצע השינוי! ***
+                // במקום לפנות לגוגל, אנחנו פונים לשרת המתווך שלנו שיצרנו בתיקיית api
+                const url = `/api/generate`;
                 const options = {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        instances: { prompt: enhancedPrompt },
-                        parameters: { sampleCount: 1 }
+                        promptInput: promptInput // אנחנו שולחים לשרת רק את הטקסט של התלמיד
                     })
                 };
 
