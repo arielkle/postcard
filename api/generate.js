@@ -1,59 +1,43 @@
 export default async function handler(req, res) {
-  // הגדרת כותרות CORS לאבטחה וגישה מהדפדפן
+  // הגדרות CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'API Key missing. Please set GEMINI_API_KEY in Vercel settings.' });
-  }
+  if (!apiKey) return res.status(500).json({ error: 'מפתח API חסר בהגדרות Vercel' });
 
   try {
     const { promptInput } = req.body;
     
-    // כתובת ה-API המעודכנת למודל Imagen 3
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`;
+    // פנייה למודל Gemini 1.5 Flash - המודל החינמי והזמין ביותר
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: [
-          { 
-            prompt: `A beautiful, detailed illustration of an imaginary land: ${promptInput}. Storybook style, vibrant colors.` 
-          }
-        ],
-        parameters: {
-          sampleCount: 1,
-          aspectRatio: "1:1",
-          safetySetting: "BLOCK_LOW_AND_ABOVE"
-        }
+        contents: [{
+          parts: [{
+            text: `You are an AI assistant that helps students create postcards. 
+            Translate this Hebrew description into a detailed English image prompt for a magical, colorful illustration. 
+            Keep it whimsical and artistic. Output ONLY the English description.
+            Hebrew: ${promptInput}`
+          }]
+        }]
       })
     });
 
     const data = await response.json();
+    const refinedPrompt = data.candidates?.[0]?.content?.parts?.[0]?.text || promptInput;
 
-    if (!response.ok) {
-      // חילוץ הודעת השגיאה המפורטת מגוגל
-      const errorMsg = data.error?.message || "Unknown error from Google API";
-      return res.status(response.status).json({ 
-        error: `שגיאת גוגל: ${errorMsg}`,
-        technicalDetails: data 
-      });
-    }
-
-    return res.status(200).json(data);
+    // מחזירים את הפרומפט המשופר באנגלית לאפליקציה
+    return res.status(200).json({ refinedPrompt: refinedPrompt.trim() });
 
   } catch (error) {
-    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+    return res.status(500).json({ error: 'Internal Error: ' + error.message });
   }
 }
