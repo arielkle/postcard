@@ -3,111 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>יוצר הגלויות הדמיוניות</title>
+    <title>יוצר הגלויות</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #f0fdfa; font-family: 'Segoe UI', sans-serif; }
-        .postcard-frame { background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px; }
+        body { background-color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+        .postcard-shadow { shadow-lg; border: 8px solid white; outline: 1px solid #e2e8f0; }
         .hidden { display: none; }
-        @keyframes progress { 0% { width: 0%; } 100% { width: 100%; } }
-        .progress-bar { animation: progress 10s linear forwards; }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <div class="max-w-2xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-teal-100">
-        <div class="bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-center py-8 px-4">
-            <h1 class="text-3xl font-bold mb-2 text-shadow">🎨 יוצר הגלויות המהיר 🌍</h1>
-            <p class="text-teal-50">גרסת ביצועים משופרת</p>
+    <div class="max-w-xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+        <div class="bg-indigo-600 text-white p-8 text-center">
+            <h1 class="text-3xl font-black mb-1">גלויה מהדמיון 🎨</h1>
+            <p class="opacity-80">כתבו תיאור וצפו בקסם</p>
         </div>
 
-        <div class="p-6 md:p-8">
+        <div class="p-6">
             <textarea id="promptInput" rows="3" 
-                class="w-full px-4 py-3 border-2 border-teal-100 rounded-xl focus:outline-none focus:border-teal-500 text-lg mb-4 shadow-inner"
-                placeholder="מה יש בארץ שלכם?"></textarea>
+                class="w-full p-4 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 outline-none transition-all mb-4 text-lg"
+                placeholder="לדוגמה: אי של שוקולד בלב ים של חלב..."></textarea>
 
-            <button id="generateBtn" onclick="generateImage()" 
-                class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all text-xl">
+            <button id="btn" onclick="go()" 
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg transition-transform active:scale-95 text-xl">
                 צייר לי גלויה!
             </button>
-
-            <div id="errorMessage" class="hidden mt-4 p-4 bg-red-50 text-red-800 rounded-xl border-r-4 border-red-500">
-                <p id="errorText" class="text-sm font-mono"></p>
-            </div>
+            
+            <div id="err" class="hidden mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm border-r-4 border-red-500"></div>
         </div>
 
-        <div class="bg-gray-50 p-6 border-t flex flex-col items-center justify-center min-h-[350px] postcard-frame relative">
-            
-            <!-- חיווי טעינה -->
-            <div id="loadingState" class="hidden w-full flex flex-col items-center">
-                <div class="w-full max-w-xs bg-gray-200 rounded-full h-2 mb-4 overflow-hidden">
-                    <div id="progressBar" class="bg-teal-500 h-full progress-bar"></div>
-                </div>
-                <p id="loadingStatus" class="font-bold text-teal-700 animate-pulse text-xl">מפעיל את הדמיון...</p>
-                <p class="text-xs text-gray-500 mt-2">אם זה לוקח יותר מ-15 שניות, נסו לרענן.</p>
+        <div class="bg-slate-50 p-6 flex flex-col items-center justify-center min-h-[350px] relative">
+            <!-- מצב טעינה -->
+            <div id="loader" class="hidden flex flex-col items-center">
+                <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p id="status" class="font-bold text-indigo-600">מתחיל...</p>
             </div>
 
-            <div id="imageResultContainer" class="hidden w-full max-w-sm bg-white p-3 shadow-2xl border-4 border-double border-gray-200 transform rotate-1">
-                <img id="generatedImage" src="" alt="גלויה" class="w-full h-auto">
-                <p class="mt-4 text-center font-serif text-gray-400 italic">דרישת שלום מהדמיון</p>
+            <!-- התוצאה -->
+            <div id="result" class="hidden w-full flex flex-col items-center">
+                <img id="img" class="w-full h-auto postcard-shadow rounded-sm" src="" alt="גלויה">
+                <p class="mt-4 font-serif italic text-slate-400">Greetings from far away</p>
             </div>
 
-            <div id="initialText" class="text-gray-400 text-center">
-                הגלויה תופיע כאן
-            </div>
+            <p id="empty" class="text-slate-300">הגלויה תופיע כאן</p>
         </div>
     </div>
 
     <script>
-        async function generateImage() {
-            const prompt = document.getElementById('promptInput').value.trim();
-            const btn = document.getElementById('generateBtn');
-            const status = document.getElementById('loadingStatus');
-            const errorContainer = document.getElementById('errorMessage');
+        async function go() {
+            const input = document.getElementById('promptInput').value.trim();
+            if(!input) return;
 
-            if (!prompt) return;
-
-            errorContainer.classList.add('hidden');
-            btn.disabled = true;
-            document.getElementById('loadingState').classList.remove('hidden');
-            document.getElementById('initialText').classList.add('hidden');
-            document.getElementById('imageResultContainer').classList.add('hidden');
+            // איפוס מסך
+            document.getElementById('err').classList.add('hidden');
+            document.getElementById('empty').classList.add('hidden');
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('loader').classList.remove('hidden');
+            document.getElementById('btn').disabled = true;
             
-            status.innerText = "מתרגם את התיאור...";
+            const status = document.getElementById('status');
+            status.innerText = "מעבד את הבקשה...";
+
+            let finalPrompt = input;
 
             try {
-                // שלב 1: תרגום
-                const res = await fetch('/api/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ promptInput: prompt })
-                });
-
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "שגיאת שרת");
+                // שלב 1: ניסיון תרגום (עם Timeout)
+                try {
+                    const res = await fetch('/api/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ promptInput: input })
+                    });
+                    const data = await res.json();
+                    if(data.refinedPrompt) finalPrompt = data.refinedPrompt;
+                } catch(e) {
+                    console.log("Using original prompt due to server delay");
+                }
 
                 status.innerText = "מצייר את הגלויה...";
-                
+
                 // שלב 2: יצירת תמונה
-                const refined = encodeURIComponent(data.refinedPrompt);
-                const imageUrl = `https://pollinations.ai/p/${refined}?width=800&height=800&seed=${Date.now()}&nologo=true`;
+                const seed = Math.floor(Math.random() * 1000000);
+                const imageUrl = `https://pollinations.ai/p/${encodeURIComponent(finalPrompt)}?width=800&height=800&seed=${seed}&model=turbo`;
 
-                const img = new Image();
-                img.onload = () => {
-                    document.getElementById('generatedImage').src = imageUrl;
-                    document.getElementById('loadingState').classList.add('hidden');
-                    document.getElementById('imageResultContainer').classList.remove('hidden');
-                    btn.disabled = false;
+                const imageObj = new Image();
+                imageObj.onload = () => {
+                    document.getElementById('img').src = imageUrl;
+                    document.getElementById('loader').classList.add('hidden');
+                    document.getElementById('result').classList.remove('hidden');
+                    document.getElementById('btn').disabled = false;
                 };
-                img.onerror = () => { throw new Error("טעינת התמונה נכשלה"); };
-                img.src = imageUrl;
+                imageObj.onerror = () => { throw new Error("בעיה בטעינת התמונה"); };
+                imageObj.src = imageUrl;
 
-            } catch (err) {
-                document.getElementById('errorText').innerText = err.message;
-                errorContainer.classList.remove('hidden');
-                document.getElementById('loadingState').classList.add('hidden');
-                document.getElementById('initialText').classList.remove('hidden');
-                btn.disabled = false;
+            } catch (e) {
+                document.getElementById('err').innerText = "שגיאה: " + e.message;
+                document.getElementById('err').classList.remove('hidden');
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('empty').classList.remove('hidden');
+                document.getElementById('btn').disabled = false;
             }
         }
     </script>
