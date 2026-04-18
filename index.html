@@ -6,66 +6,72 @@
     <title>יוצר הגלויות הדמיוניות</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #f8fafc; font-family: system-ui, sans-serif; }
+        body { background-color: #f1f5f9; font-family: system-ui, -apple-system, sans-serif; }
         .hidden { display: none; }
-        .postcard-container { 
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        .postcard-frame { 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             border: 12px solid white;
+            transition: all 0.5s ease;
         }
-        @keyframes shimmer { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-        .loading-pulse { animation: shimmer 2s infinite; }
+        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-spin-slow { animation: spin-slow 3s linear infinite; }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
     <div class="max-w-xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
-        <div class="bg-teal-600 p-8 text-white text-center">
-            <h1 class="text-3xl font-black mb-2 italic">Magic Postcard 💌</h1>
-            <p class="text-teal-100 font-medium">הופכים מילים לציורים קסומים</p>
+        <!-- כותרת -->
+        <div class="bg-indigo-600 p-8 text-white text-center">
+            <h1 class="text-3xl font-black mb-2 italic">Imagination Engine 🌟</h1>
+            <p class="text-indigo-100 font-medium">הופכים תיאור בעברית לגלויה קסומה</p>
         </div>
 
+        <!-- קלט -->
         <div class="p-8">
+            <label class="block text-slate-700 font-bold mb-3 text-lg">תארו את העולם שבלבכם:</label>
             <textarea id="promptInput" rows="3" 
-                class="w-full p-4 border-2 border-slate-100 rounded-2xl focus:border-teal-500 outline-none transition-all mb-4 text-lg shadow-inner"
-                placeholder="מה נצייר היום?"></textarea>
+                class="w-full p-4 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 outline-none transition-all mb-4 text-lg shadow-inner bg-slate-50"
+                placeholder="למשל: אי צף בשמיים עם מפלי מים שזורמים לעננים..."></textarea>
 
             <button id="btn" onclick="generate()" 
-                class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 rounded-2xl shadow-lg transform active:scale-95 transition-all text-xl">
-                צייר לי גלויה!
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg transform active:scale-95 transition-all text-xl flex justify-center items-center gap-3">
+                <span id="btnText">צייר לי גלויה!</span>
             </button>
             
-            <div id="debug" class="hidden mt-4 p-3 bg-slate-50 text-slate-500 rounded-lg text-[10px] font-mono border border-slate-100">
+            <div id="debug" class="hidden mt-4 p-3 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-mono border border-slate-200 overflow-hidden">
                 <ul id="logs" class="list-disc list-inside"></ul>
             </div>
         </div>
 
-        <div class="bg-slate-50 p-6 flex flex-col items-center justify-center min-h-[380px]">
-            <!-- אנימציית טעינה -->
+        <!-- תצוגה -->
+        <div class="bg-slate-50 p-6 flex flex-col items-center justify-center min-h-[400px] border-t border-slate-100">
+            <!-- טעינה -->
             <div id="loader" class="hidden flex flex-col items-center">
-                <div class="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p id="status" class="font-bold text-teal-700 text-xl loading-pulse">הקסם מתרחש...</p>
+                <div class="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p id="status" class="font-bold text-indigo-700 text-xl">מעבד את הדמיון...</p>
             </div>
 
-            <!-- התוצאה -->
+            <!-- תמונה סופית -->
             <div id="result" class="hidden w-full flex flex-col items-center">
-                <div class="bg-white postcard-container rounded-sm transform rotate-1 transition-transform hover:rotate-0 duration-500">
-                    <img id="img" class="w-full h-auto" src="" alt="Postcard">
+                <div class="bg-white postcard-frame rounded-sm transform rotate-1 hover:rotate-0">
+                    <img id="img" class="w-full h-auto" src="" alt="גלויה">
                 </div>
-                <div class="mt-6 w-full border-t border-dashed border-slate-300 pt-4 flex justify-between items-center px-4">
-                    <p class="font-serif italic text-slate-400">Greetings from Imagination</p>
-                    <div class="w-10 h-12 bg-slate-200 rounded-sm opacity-50 border border-slate-300"></div>
+                <div class="mt-8 w-full border-t border-dashed border-slate-300 pt-4 flex justify-between items-center px-4">
+                    <p class="font-serif italic text-slate-400">Dreamland Postcard</p>
+                    <div class="w-12 h-14 bg-indigo-50 rounded-sm border border-indigo-100 flex items-center justify-center text-[10px] text-indigo-200 uppercase font-bold">Stamp</div>
                 </div>
             </div>
 
-            <div id="placeholder" class="text-slate-300 font-medium text-center">
-                <svg class="w-16 h-16 mx-auto mb-2 opacity-20" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"></path></svg>
-                הגלויה שלכם תופיע כאן
+            <!-- הודעה התחלתית -->
+            <div id="placeholder" class="text-slate-300 font-medium text-center opacity-50">
+                <svg class="w-20 h-20 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                הגלויה תופיע כאן תוך מספר שניות
             </div>
         </div>
     </div>
 
     <script>
-        function log(m) {
+        function addLog(m) {
             const list = document.getElementById('logs');
             const li = document.createElement('li');
             li.innerText = m;
@@ -77,19 +83,20 @@
             const input = document.getElementById('promptInput').value.trim();
             if(!input) return;
 
-            // ניקוי מסך
+            // אתחול
             document.getElementById('logs').innerHTML = "";
             document.getElementById('placeholder').classList.add('hidden');
             document.getElementById('result').classList.add('hidden');
             document.getElementById('loader').classList.remove('hidden');
-            document.getElementById('btn').disabled = true;
+            const btn = document.getElementById('btn');
+            btn.disabled = true;
             
             const status = document.getElementById('status');
-            let finalPrompt = "magical landscape";
+            let finalPrompt = "";
 
             try {
-                log("מנתח את התיאור...");
-                status.innerText = "מתרגם...";
+                addLog("1. מתרגם ומשפר את התיאור דרך Gemini...");
+                status.innerText = " Gemini מנתח...";
 
                 const res = await fetch('/api/generate', {
                     method: 'POST',
@@ -98,40 +105,32 @@
                 });
                 
                 const data = await res.json();
-                
-                // ניקוי תווים לא לטיניים מהתוצאה (ליתר ביטחון)
+                // ניקוי תווים לא לטיניים ליתר ביטחון
                 finalPrompt = (data.refinedPrompt || "magical land").replace(/[^\x00-\x7F]/g, "");
-                log("פרומפט סופי: " + finalPrompt);
+                addLog("2. נוצר פרומפט באנגלית: " + finalPrompt);
 
-                status.innerText = "מצייר...";
-                log("יוצר את התמונה...");
+                status.innerText = " מצייר את הגלויה...";
+                addLog("3. פונה למודל התמונה המהיר...");
 
                 const seed = Math.floor(Math.random() * 1000000);
-                const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?width=1024&height=1024&seed=${seed}&nologo=true&model=flux`;
+                // שימוש במודל Turbo שהוא הכי מהיר כרגע
+                const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?width=1024&height=1024&seed=${seed}&nologo=true&model=turbo`;
 
                 const tempImg = new Image();
                 tempImg.onload = () => {
                     document.getElementById('img').src = imageUrl;
                     document.getElementById('loader').classList.add('hidden');
                     document.getElementById('result').classList.remove('hidden');
-                    document.getElementById('btn').disabled = false;
-                    log("הצלחה!");
+                    btn.disabled = false;
+                    addLog("4. הצלחה!");
                 };
-                tempImg.onerror = () => {
-                    log("שגיאה בשירות התמונות. מנסה גיבוי...");
-                    // גיבוי מהיר
-                    document.getElementById('img').src = `https://image.pollinations.ai/prompt/fantasy%20landscape?seed=${seed}`;
-                    document.getElementById('loader').classList.add('hidden');
-                    document.getElementById('result').classList.remove('hidden');
-                    document.getElementById('btn').disabled = false;
-                };
+                tempImg.onerror = () => { throw new Error("בעיה בשירות הציור"); };
                 tempImg.src = imageUrl;
 
             } catch (e) {
-                log("תקלה: " + e.message);
-                document.getElementById('loader').classList.add('hidden');
-                document.getElementById('placeholder').classList.remove('hidden');
-                document.getElementById('btn').disabled = false;
+                addLog("שגיאה: " + e.message);
+                status.innerText = "תקלה בדרך...";
+                btn.disabled = false;
             }
         }
     </script>
